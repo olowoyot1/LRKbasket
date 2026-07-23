@@ -37,6 +37,7 @@ export default function AdminProductManager() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   async function loadProducts() {
@@ -57,6 +58,21 @@ export default function AdminProductManager() {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  async function seedCatalog() {
+    setSeeding(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/seed', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load starter catalog');
+      await loadProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setSeeding(false);
+    }
+  }
 
   function startEdit(p: Product) {
     setForm({
@@ -354,7 +370,17 @@ export default function AdminProductManager() {
             </div>
           ))}
           {products.length === 0 && (
-            <p className="text-ink/50 text-sm py-10 text-center">No products yet — add your first one above.</p>
+            <div className="text-center py-10">
+              <p className="text-ink/50 text-sm mb-4">No products yet.</p>
+              <button
+                onClick={seedCatalog}
+                disabled={seeding}
+                className="bg-purple text-cream rounded-lg px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
+              >
+                {seeding ? 'Loading starter catalog…' : 'Load 19-item starter catalog'}
+              </button>
+              <p className="text-ink/40 text-xs mt-2">Or add your first product manually using the form above.</p>
+            </div>
           )}
         </div>
       )}

@@ -27,12 +27,13 @@ Fill in `.env`:
 | `BLOB_READ_WRITE_TOKEN` | Optional | For product photo uploads. See §5. |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_NOTIFICATION_EMAIL` | Optional | For order emails. See §4. |
 
-Push the schema and seed the product catalog:
+Push the schema:
 
 ```bash
-npx prisma migrate dev --name init
-npm run db:seed
+npx prisma db push
 ```
+
+Then load the starter product catalog either by running `npm run db:seed`, or by starting the app and clicking "Load 19-item starter catalog" the first time you open `/admin` (see §3) — useful if you'd rather not touch the CLI at all.
 
 Run it:
 
@@ -71,7 +72,7 @@ Sign in with `ADMIN_PASSWORD` at `/admin`. Three tabs, all cookie-protected (bot
 
 `/admin` itself is excluded from search engines (`app/robots.ts` + `noindex` on every admin route), and the login endpoint is rate-limited to 5 attempts per 15 minutes per IP. That's a reasonable bar for a small storefront, not enterprise-grade protection — see the comment in `lib/rateLimit.ts` if you outgrow it.
 
-`prisma/seed.ts` is still there for bootstrapping a fresh database; after that, day-to-day changes go through `/admin`.
+`prisma/seed.ts` still works from the CLI for local dev; the same starter list also powers the **"Load 19-item starter catalog"** button that appears on the Products tab the first time it's empty — it's a one-time, guarded action (it refuses to run if the database already has products, so it can't accidentally wipe real data).
 
 ## 4. Order emails (optional)
 
@@ -92,18 +93,14 @@ In your Vercel project: **Storage → Create → Blob**, then connect it to the 
 2. Go to [vercel.com/new](https://vercel.com/new) and import the repo.
 3. Add a Postgres database from the Storage tab (or paste a Neon connection string) — sets `DATABASE_URL` automatically.
 4. Add the rest of the environment variables from the table in §1, in **Project Settings → Environment Variables** (use your **live** Paystack key for production).
-5. Deploy. `prisma generate` runs automatically via `postinstall`.
-6. Run the migration against production once, from your machine:
-   ```bash
-   DATABASE_URL="your-production-url" npx prisma migrate deploy
-   DATABASE_URL="your-production-url" npm run db:seed
-   ```
+5. Deploy. The build automatically runs `prisma db push`, which creates every table in the schema against your production database — **no separate CLI step, no PowerShell, no local terminal needed.** (This is `db push`, not `migrate deploy`: it syncs the schema directly rather than replaying migration files, which is simpler for a project this size but doesn't keep a migration history — see the note in §8.)
+6. Once the deploy finishes, visit `https://your-domain.vercel.app/admin`, sign in with `ADMIN_PASSWORD`, and click **"Load 19-item starter catalog"** on the Products tab. That's the seed step — done entirely in the browser.
 7. In the Paystack dashboard, set your webhook URL to:
    ```
    https://your-domain.vercel.app/api/paystack/webhook
    ```
 
-Every subsequent `git push` redeploys automatically.
+Every subsequent `git push` redeploys automatically, re-running `prisma db push` each time — so future schema changes (e.g. if I add a new field) roll out the same way, with no manual migration step.
 
 ## 7. Project structure
 
@@ -123,12 +120,13 @@ app/
   api/admin/orders/             paginated order list + status updates
   api/admin/settings/           delivery pricing
   api/admin/upload/route.ts     product photo uploads to Vercel Blob
+  api/admin/seed/route.ts       one-click starter catalog (guarded, empty-DB only)
 lib/
   prisma.ts, paystack.ts, whatsapp.ts, email.ts, settings.ts, stock.ts,
-  adminAuth.ts, rateLimit.ts, env.ts
+  adminAuth.ts, rateLimit.ts, env.ts, seedData.ts
 components/                     cart context, header, product grid, cart drawer, admin UI
 prisma/schema.prisma             Product / Order / OrderItem / Settings models
-prisma/seed.ts                    19-item starter catalog + default settings
+prisma/seed.ts                    CLI seed script (same data as the admin seed button)
 tests/                            unit tests for pricing logic and the rate limiter
 ```
 
@@ -140,3 +138,4 @@ Being upfront about what this doesn't do, so nothing here is a surprise:
 - **Test coverage is a starting point, not comprehensive.** `tests/` covers pricing logic and the rate limiter as an example of how to add more — it doesn't cover the API routes or UI.
 - **Categories are still hardcoded** (`types/index.ts`), unlike products, stock, and delivery pricing, which are all editable from `/admin`.
 - **The rate limiter is per-instance**, not distributed (see §3) — fine for a small store, worth upgrading to Vercel Firewall or Upstash if traffic grows.
+- **Schema sync uses `prisma db push`, not `prisma migrate`.** Every deploy pushes the current `schema.prisma` straight to the database with `--accept-data-loss`, which is what makes zero-CLI deploys possible, but it means there's no migration history and no confirmation prompt before a destructive change (e.g. deleting a column) takes effect. Fine for one person managing a small store; if you add a team or need rollback-able migration history later, switch `build` in `package.json` back to `prisma migrate deploy` and generate real migration files with `npx prisma migrate dev` against a database you can reach locally.
