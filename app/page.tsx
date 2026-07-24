@@ -1,14 +1,17 @@
 import { prisma } from '@/lib/prisma';
 import StoreClient from '@/components/StoreClient';
+import BundlesSection from '@/components/BundlesSection';
 import { getSettings } from '@/lib/settings';
+import { getActiveBundles } from '@/lib/bundles';
 import { formatNaira } from '@/types';
 
 export const revalidate = 0;
 
 export default async function HomePage() {
-  const [products, settings] = await Promise.all([
+  const [products, settings, bundles] = await Promise.all([
     prisma.product.findMany({ orderBy: { createdAt: 'asc' } }),
     getSettings(),
+    getActiveBundles(),
   ]);
 
   return (
@@ -46,6 +49,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <BundlesSection bundles={bundles} />
 
       <StoreClient products={products} />
 

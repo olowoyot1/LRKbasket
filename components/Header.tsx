@@ -25,6 +25,9 @@ export default function Header({
           LRK Basket
         </Link>
         <nav className="hidden md:flex gap-6 text-sm">
+          <a href="/#bundles" className="opacity-80 hover:opacity-100 transition-opacity">
+            Bundles
+          </a>
           {CATEGORIES.map((c) => (
             <a key={c.id} href={`/#${c.id}`} className="opacity-80 hover:opacity-100 transition-opacity">
               {c.label}
@@ -73,6 +76,9 @@ export default function Header({
             />
           )}
           <nav className="flex flex-col gap-3 text-sm">
+            <a href="/#bundles" onClick={() => setMenuOpen(false)} className="opacity-80 hover:opacity-100 transition-opacity">
+              Bundles
+            </a>
             {CATEGORIES.map((c) => (
               <a
                 key={c.id}

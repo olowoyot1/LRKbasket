@@ -38,7 +38,14 @@ export default function CartDrawer() {
             lines.map((l) => (
               <div key={l.id} className="flex justify-between gap-2.5 py-2.5 border-b border-dashed border-cream/15">
                 <div>
-                  <div className="font-sans text-[13px] font-medium">{l.name}</div>
+                  <div className="font-sans text-[13px] font-medium flex items-center gap-1.5">
+                    {l.name}
+                    {l.kind === 'bundle' && (
+                      <span className="text-[9px] uppercase tracking-wide bg-yellow/25 text-yellowDark px-1.5 py-0.5 rounded-full font-semibold">
+                        Bundle
+                      </span>
+                    )}
+                  </div>
                   <div className="opacity-60 text-[11px] mt-0.5">
                     {formatNaira(l.price)} × {l.qty}
                   </div>

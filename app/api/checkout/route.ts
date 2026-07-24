@@ -5,6 +5,7 @@ import { initializeTransaction } from '@/lib/paystack';
 import { deliveryFeeFor } from '@/types';
 import { getSettings } from '@/lib/settings';
 import { restoreStock } from '@/lib/stock';
+import { getBundleProgress, effectiveBundlePrice } from '@/lib/groupBuy';
 import { sendAdminOrderNotification, sendCustomerOrderConfirmation } from '@/lib/email';
 
 const bodySchema = z.object({
@@ -18,6 +19,7 @@ const bodySchema = z.object({
       z.object({
         id: z.string(),
         qty: z.number().int().positive(),
+        kind: z.enum(['product', 'bundle']).default('product'),
       })
     )
     .min(1),
@@ -36,22 +38,70 @@ export async function POST(req: NextRequest) {
   }
   const { customerName, email, phone, address, items, channel } = parsed.data;
 
-  // Look up authoritative prices and stock from the database - never trust
-  // client-submitted values for either.
+  const productRequests = items.filter((i) => i.kind === 'product');
+  const bundleRequests = items.filter((i) => i.kind === 'bundle');
+
   const products = await prisma.product.findMany({
-    where: { id: { in: items.map((i) => i.id) } },
+    where: { id: { in: productRequests.map((i) => i.id) } },
   });
-  if (products.length === 0) {
-    return NextResponse.json({ error: 'No valid products in cart' }, { status: 400 });
+  const bundles = await prisma.bundle.findMany({
+    where: { id: { in: bundleRequests.map((i) => i.id) }, active: true },
+    include: { items: { include: { product: true } } },
+  });
+
+  if (products.length === 0 && bundles.length === 0) {
+    return NextResponse.json({ error: 'No valid items in cart' }, { status: 400 });
   }
 
-  const orderItems = items
+  // Product line items: authoritative price/name from the database.
+  const productLineItems = productRequests
     .map((i) => {
       const product = products.find((p) => p.id === i.id);
       if (!product) return null;
-      return { productId: product.id, name: product.name, price: product.price, qty: i.qty };
+      return { productId: product.id, bundleId: null, name: product.name, price: product.price, qty: i.qty };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  // Bundle line items: price reflects group-buy status *before* this order
+  // (this order's own quantity only counts toward unlocking future orders).
+  const bundleLineItems = await Promise.all(
+    bundleRequests.map(async (i) => {
+      const bundle = bundles.find((b) => b.id === i.id);
+      if (!bundle) return null;
+      const progress = bundle.groupBuyEnabled
+        ? await getBundleProgress(bundle.id, bundle.groupBuyTarget)
+        : undefined;
+      const price = bundle.groupBuyEnabled
+        ? effectiveBundlePrice(bundle.price, bundle.groupBuyDiscountPercent, progress?.unlocked ?? false)
+        : bundle.price;
+      return { bundleId: bundle.id, productId: null, name: bundle.name, price, qty: i.qty };
+    })
+  );
+  const validBundleLineItems = bundleLineItems.filter((x): x is NonNullable<typeof x> => x !== null);
+
+  const orderItems = [...productLineItems, ...validBundleLineItems];
+  if (orderItems.length === 0) {
+    return NextResponse.json({ error: 'No valid items in cart' }, { status: 400 });
+  }
+
+  // Merge stock deltas across standalone products AND bundle components, so
+  // a product appearing both on its own and inside a bundle is reserved
+  // correctly as one combined amount.
+  const stockDeltas = new Map<string, number>();
+  const productNames = new Map<string, string>();
+  for (const p of products) productNames.set(p.id, p.name);
+  for (const line of productLineItems) {
+    stockDeltas.set(line.productId!, (stockDeltas.get(line.productId!) ?? 0) + line.qty);
+  }
+  for (const bundleReq of bundleRequests) {
+    const bundle = bundles.find((b) => b.id === bundleReq.id);
+    if (!bundle) continue;
+    for (const component of bundle.items) {
+      productNames.set(component.productId, component.product.name);
+      const needed = component.qty * bundleReq.qty;
+      stockDeltas.set(component.productId, (stockDeltas.get(component.productId) ?? 0) + needed);
+    }
+  }
 
   const subtotal = orderItems.reduce((s, i) => s + i.price * i.qty, 0);
   const settings = await getSettings();
@@ -65,17 +115,18 @@ export async function POST(req: NextRequest) {
 
   let order;
   try {
-    // Reserve stock and create the order atomically: if any item is out of
-    // stock, the whole transaction rolls back and nothing is decremented.
+    // Reserve stock and create the order atomically: if anything (a plain
+    // product or a bundle's component) is out of stock, the whole
+    // transaction rolls back and nothing is decremented.
     order = await prisma.$transaction(async (tx) => {
-      for (const item of orderItems) {
+      for (const [productId, qty] of stockDeltas) {
         const updated = await tx.product.updateMany({
-          where: { id: item.productId, stock: { gte: item.qty } },
-          data: { stock: { decrement: item.qty } },
+          where: { id: productId, stock: { gte: qty } },
+          data: { stock: { decrement: qty } },
         });
         if (updated.count === 0) {
-          const product = products.find((p) => p.id === item.productId);
-          throw new OutOfStockError(item.name, product?.stock ?? 0);
+          const current = await tx.product.findUnique({ where: { id: productId } });
+          throw new OutOfStockError(productNames.get(productId) ?? 'An item', current?.stock ?? 0);
         }
       }
       return tx.order.create({
@@ -99,6 +150,8 @@ export async function POST(req: NextRequest) {
     }
     throw err;
   }
+
+  const restoreDeltas = [...stockDeltas.entries()].map(([productId, qty]) => ({ productId, qty }));
 
   const emailPayload = {
     reference,
@@ -138,7 +191,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ authorizationUrl: paystack.authorization_url, reference });
   } catch (err) {
     await prisma.order.update({ where: { id: order.id }, data: { status: 'FAILED' } });
-    await restoreStock(orderItems);
+    await restoreStock(restoreDeltas);
     const message = err instanceof Error ? err.message : 'Payment initialization failed';
     return NextResponse.json({ error: message }, { status: 502 });
   }

@@ -15,6 +15,7 @@ export default function AdminNav() {
 
   const tabs = [
     { href: '/admin', label: 'Products' },
+    { href: '/admin/bundles', label: 'Bundles' },
     { href: '/admin/orders', label: 'Orders' },
     { href: '/admin/settings', label: 'Settings' },
   ];

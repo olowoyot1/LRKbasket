@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import type { CartLine, Product } from '@/types';
+import type { CartLine, Product, Bundle } from '@/types';
 import { deliveryFeeFor } from '@/types';
 
 type CartContextValue = {
@@ -9,7 +9,7 @@ type CartContextValue = {
   drawerOpen: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
-  addItem: (product: Product) => void;
+  addItem: (item: Product | Bundle, kind?: 'product' | 'bundle') => void;
   incItem: (id: string) => void;
   decItem: (id: string) => void;
   qtyFor: (id: string) => number;
@@ -49,13 +49,14 @@ export function CartProvider({
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
   }, [lines, hydrated]);
 
-  function addItem(product: Product) {
+  function addItem(item: Product | Bundle, kind: 'product' | 'bundle' = 'product') {
+    const price = kind === 'bundle' ? (item as Bundle).effectivePrice : (item as Product).price;
     setLines((prev) => {
-      const existing = prev.find((l) => l.id === product.id);
+      const existing = prev.find((l) => l.id === item.id);
       if (existing) {
-        return prev.map((l) => (l.id === product.id ? { ...l, qty: l.qty + 1 } : l));
+        return prev.map((l) => (l.id === item.id ? { ...l, qty: l.qty + 1 } : l));
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, qty: 1 }];
+      return [...prev, { id: item.id, name: item.name, price, qty: 1, kind }];
     });
   }
 

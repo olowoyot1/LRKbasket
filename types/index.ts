@@ -11,11 +11,37 @@ export type Product = {
   stock: number;
 };
 
+export type BundleItemView = {
+  productId: string;
+  name: string;
+  qty: number;
+};
+
+export type Bundle = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl?: string | null;
+  tag: string;
+  color: string;
+  active: boolean;
+  groupBuyEnabled: boolean;
+  groupBuyTarget: number;
+  groupBuyDiscountPercent: number;
+  items: BundleItemView[];
+  // Computed server-side, not stored:
+  effectivePrice: number;
+  compareAtPrice: number; // sum of component prices bought individually
+  groupBuy?: { committed: number; target: number; unlocked: boolean };
+};
+
 export type CartLine = {
   id: string;
   name: string;
   price: number;
   qty: number;
+  kind: 'product' | 'bundle';
 };
 
 export const CATEGORIES: { id: string; label: string }[] = [

@@ -21,3 +21,60 @@ export const STARTER_PRODUCTS = [
 ];
 
 export const DEFAULT_SETTINGS = { deliveryFee: 1500, freeDeliveryThreshold: 15000 };
+
+// Bundles reference products by name - resolved to real product IDs at seed
+// time (see prisma/seed.ts and app/api/admin/seed/route.ts), since products
+// must exist first.
+export const STARTER_BUNDLES = [
+  {
+    name: 'Soup Starter Pack',
+    description: 'Everything for a pot of soup base — greens, pepper, crayfish, and palm oil.',
+    price: 6900,
+    tag: 'Bundle',
+    color: 'purple',
+    active: true,
+    groupBuyEnabled: true,
+    groupBuyTarget: 8,
+    groupBuyDiscountPercent: 10,
+    items: [
+      { productName: 'Ugu leaves', qty: 1 },
+      { productName: 'Fresh okra', qty: 1 },
+      { productName: 'Ground crayfish', qty: 1 },
+      { productName: 'Dried ata rodo', qty: 1 },
+      { productName: 'Unrefined red palm oil', qty: 1 },
+    ],
+  },
+  {
+    name: 'Breakfast Basket',
+    description: 'Eggs, milk, local cheese, and plantain — a full breakfast spread.',
+    price: 6800,
+    tag: 'Bundle',
+    color: 'yellow',
+    active: true,
+    groupBuyEnabled: true,
+    groupBuyTarget: 6,
+    groupBuyDiscountPercent: 8,
+    items: [
+      { productName: 'Free-range eggs', qty: 1 },
+      { productName: 'Fresh cow milk', qty: 1 },
+      { productName: 'Wara (local cheese)', qty: 1 },
+      { productName: 'Ripe plantain', qty: 1 },
+    ],
+  },
+  {
+    name: 'Raw Pantry Starter',
+    description: 'Raw honey, sprouted groundnuts, and sprouted moringa — unprocessed staples.',
+    price: 6600,
+    tag: 'Bundle',
+    color: 'purple',
+    active: true,
+    groupBuyEnabled: true,
+    groupBuyTarget: 5,
+    groupBuyDiscountPercent: 12,
+    items: [
+      { productName: 'Raw wild honey', qty: 1 },
+      { productName: 'Sprouted groundnuts', qty: 1 },
+      { productName: 'Sprouted moringa leaves', qty: 1 },
+    ],
+  },
+];

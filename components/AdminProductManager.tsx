@@ -377,7 +377,7 @@ export default function AdminProductManager() {
                 disabled={seeding}
                 className="bg-purple text-cream rounded-lg px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
               >
-                {seeding ? 'Loading starter catalog…' : 'Load 19-item starter catalog'}
+                {seeding ? 'Loading starter catalog…' : 'Load starter catalog (19 products + 3 bundles)'}
               </button>
               <p className="text-ink/40 text-xs mt-2">Or add your first product manually using the form above.</p>
             </div>
