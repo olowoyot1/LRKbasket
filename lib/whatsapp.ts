@@ -34,15 +34,21 @@ export function buildWhatsAppOrderLink(params: {
     `Please confirm and share payment details.`,
   ].join('\n');
 
-  const base = number ? `https://wa.me/${number}` : 'https://wa.me/';
-  return `${base}?text=${encodeURIComponent(message)}`;
+  // api.whatsapp.com/send (not wa.me) - wa.me 404s if there's no phone
+  // number in the URL path at all, which is exactly what happened when
+  // NEXT_PUBLIC_WHATSAPP_NUMBER wasn't set. This endpoint handles a missing
+  // phone gracefully too, so a misconfigured number degrades to "open
+  // WhatsApp with this message, let the shopper pick who to send it to"
+  // instead of a dead link.
+  const params_ = new URLSearchParams({ text: message });
+  if (number) params_.set('phone', number);
+  return `https://api.whatsapp.com/send?${params_.toString()}`;
 }
 
 /**
  * Builds a "share to invite" link for a group-buy bundle - unlike
- * buildWhatsAppOrderLink, this has no fixed recipient (no phone number in
- * the wa.me URL), so WhatsApp opens the contact picker and lets the shopper
- * choose who to invite themselves.
+ * buildWhatsAppOrderLink, this has no fixed recipient, so WhatsApp opens the
+ * contact picker and lets the shopper choose who to invite themselves.
  */
 export function buildGroupBuyShareLink(params: {
   bundleName: string;
@@ -58,5 +64,5 @@ export function buildGroupBuyShareLink(params: {
     params.storeUrl,
   ].join('\n');
 
-  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 }
