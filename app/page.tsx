@@ -5,7 +5,13 @@ import { getSettings } from '@/lib/settings';
 import { getActiveBundles } from '@/lib/bundles';
 import { formatNaira } from '@/types';
 
-export const revalidate = 0;
+// ISR instead of force-dynamic: a cached page is served for up to 30 seconds
+// before the next visitor triggers a background regeneration, so most
+// traffic never invokes the function at all. Stock/price/group-buy numbers
+// can be up to 30s stale on this page - not a correctness issue, since
+// checkout always re-validates everything against the database at order
+// time regardless of what the page showed.
+export const revalidate = 30;
 
 export default async function HomePage() {
   const [products, settings, bundles] = await Promise.all([

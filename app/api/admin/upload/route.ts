@@ -3,7 +3,8 @@ import { put } from '@vercel/blob';
 import { randomUUID } from 'crypto';
 import { isAdminRequest } from '@/lib/adminAuth';
 
-const MAX_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_SIZE = 1 * 1024 * 1024; // 1MB - photos only render as small thumbnails, so a large
+// source file just eats into Vercel Blob's free-tier storage/transfer allowance for no visual benefit.
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
 export async function POST(req: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Use a JPEG, PNG, WebP, or AVIF image' }, { status: 400 });
   }
   if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: 'Image must be under 4MB' }, { status: 400 });
+    return NextResponse.json({ error: 'Image must be under 1MB - resize or compress it first' }, { status: 400 });
   }
 
   const ext = file.name.split('.').pop() || 'jpg';

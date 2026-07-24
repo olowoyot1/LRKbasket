@@ -105,8 +105,8 @@ In your Vercel project: **Storage → Create → Blob**, then connect it to the 
 2. Go to [vercel.com/new](https://vercel.com/new) and import the repo.
 3. Add a Postgres database from the Storage tab (or paste a Neon connection string) — sets `DATABASE_URL` automatically.
 4. Add the rest of the environment variables from the table in §1, in **Project Settings → Environment Variables** (use your **live** Paystack key for production).
-5. Deploy. The build automatically runs `prisma db push`, which creates every table in the schema against your production database — **no separate CLI step, no PowerShell, no local terminal needed.** (This is `db push`, not `migrate deploy`: it syncs the schema directly rather than replaying migration files, which is simpler for a project this size but doesn't keep a migration history — see the note in §9.)
-6. Once the deploy finishes, visit `https://your-domain.vercel.app/admin`, sign in with `ADMIN_PASSWORD`, and click **"Load 19-item starter catalog"** on the Products tab. That's the seed step — done entirely in the browser.
+5. Deploy. The build automatically runs `prisma db push`, which creates every table in the schema against your production database — **no separate CLI step, no PowerShell, no local terminal needed.** (This is `db push`, not `migrate deploy`: it syncs the schema directly rather than replaying migration files, which is simpler for a project this size but doesn't keep a migration history — see the note in §10.)
+6. Once the deploy finishes, visit `https://your-domain.vercel.app/admin`, sign in with `ADMIN_PASSWORD`, and click **"Load starter catalog"** on the Products tab. That's the seed step — done entirely in the browser.
 7. In the Paystack dashboard, set your webhook URL to:
    ```
    https://your-domain.vercel.app/api/paystack/webhook
@@ -114,7 +114,21 @@ In your Vercel project: **Storage → Create → Blob**, then connect it to the 
 
 Every subsequent `git push` redeploys automatically, re-running `prisma db push` each time — so future schema changes (e.g. if I add a new field) roll out the same way, with no manual migration step.
 
-## 8. Project structure
+## 8. Staying within Vercel's free (Hobby) tier
+
+Two things worth separating: raw resource capacity, and Vercel's terms of service.
+
+**Terms of service — this is the one code can't fix.** Hobby is licensed for personal, non-commercial use. The moment this store takes a real payment through Paystack, it's commercial, which technically falls outside what Hobby's terms allow — regardless of how little traffic or revenue it does. If you're still testing with Paystack test keys and no real money is moving, that's genuinely still personal use. Once you're taking real orders, budget for **Vercel Pro** (~$20/month) — it's the plan actually licensed for this.
+
+**Resource capacity — this the project is now tuned for:**
+- **Function invocations.** The homepage used to force a fresh server render on every single visit (`revalidate = 0`). It now uses `revalidate = 30` — Vercel serves a cached page for up to 30 seconds before the next visitor triggers a background refresh, so repeat traffic within that window costs nothing. Stock counts, prices, and group-buy progress can be up to 30 seconds stale on the page as a result; this is purely cosmetic; checkout always re-validates everything against the database at order time, so nothing can actually oversell because of it.
+- **Bandwidth.** Product photos render through `next/image` instead of a plain `<img>` tag, so a full-resolution upload is automatically resized down to the ~64px thumbnail it's actually displayed at, rather than shipping the full file to every visitor. `next.config.js` allow-lists Vercel Blob's domain so this works with uploaded photos specifically.
+- **Blob storage.** The upload cap dropped from 4MB to 1MB (`app/api/admin/upload/route.ts`) — photos never render larger than a small thumbnail, so there's no reason to spend Blob's ~1GB free storage allowance on large source files.
+- **Scope decision:** admin-page image previews (in `/admin`'s Products and Bundles tabs) were left as plain `<img>` rather than converted to `next/image`. That's deliberate, not an oversight — only the store owner ever loads those pages, so the bandwidth savings wouldn't be meaningful, and it keeps the admin UI simpler.
+
+None of this changes what happens if the store gets genuinely popular — at that point you'd want Pro for the licensing reason above anyway, and its 10x-ish higher resource ceilings would absorb real growth far more comfortably than further Hobby-tier tuning could.
+
+## 9. Project structure
 
 ```
 app/
@@ -143,7 +157,7 @@ prisma/seed.ts                    CLI seed script (same data as the admin seed b
 tests/                            unit tests for pricing logic and the rate limiter
 ```
 
-## 9. Known limitations
+## 10. Known limitations
 
 Being upfront about what this doesn't do, so nothing here is a surprise:
 

@@ -4,6 +4,7 @@ import { verifyTransaction } from '@/lib/paystack';
 import { formatNaira } from '@/types';
 import ClearCartOnPaid from '@/components/ClearCartOnPaid';
 import { restoreStock } from '@/lib/stock';
+import { stockDeltasForOrderItems } from '@/lib/orderStock';
 import { sendCustomerOrderConfirmation } from '@/lib/email';
 
 export const revalidate = 0;
@@ -48,7 +49,8 @@ export default async function OrderPage({ params }: { params: { reference: strin
         });
       } else if (result.status === 'failed') {
         await prisma.order.update({ where: { id: order.id }, data: { status: 'FAILED' } });
-        await restoreStock(order.items.map((i) => ({ productId: i.productId, qty: i.qty })));
+        const deltas = await stockDeltasForOrderItems(order.items);
+        await restoreStock(deltas);
         status = 'FAILED';
       }
     } catch {

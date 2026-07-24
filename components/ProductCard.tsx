@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import type { Product } from '@/types';
 import { formatNaira } from '@/types';
 import Icon from './Icon';
@@ -25,8 +26,13 @@ export default function ProductCard({ product }: { product: Product }) {
       </span>
       <div className={`w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden ${product.imageUrl ? '' : colors.bg}`}>
         {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+          <Image
+            src={product.imageUrl}
+            alt={product.name}
+            width={64}
+            height={64}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <Icon name={product.icon} className={`w-8 h-8 ${colors.text}`} />
         )}

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { isAdminRequest } from '@/lib/adminAuth';
 import { restoreStock, reserveStock } from '@/lib/stock';
+import { stockDeltasForOrderItems } from '@/lib/orderStock';
 
 const bodySchema = z.object({
   status: z.enum(['PENDING', 'PAID', 'FAILED']),
@@ -24,16 +25,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const newStatus = parsed.data.status;
-  const items = existing.items.map((i) => ({ productId: i.productId, qty: i.qty }));
 
   // Stock is reserved (decremented) once, at order creation. Keep it in sync
   // when an order moves into or out of FAILED - a failed/cancelled order
-  // gives its stock back; reinstating it takes stock again.
+  // gives its stock back; reinstating it takes stock again. Bundle lines are
+  // expanded to their component products by stockDeltasForOrderItems.
   try {
     if (newStatus === 'FAILED' && existing.status !== 'FAILED') {
-      await restoreStock(items);
+      const deltas = await stockDeltasForOrderItems(existing.items);
+      await restoreStock(deltas);
     } else if (newStatus !== 'FAILED' && existing.status === 'FAILED') {
-      await reserveStock(items);
+      const deltas = await stockDeltasForOrderItems(existing.items);
+      await reserveStock(deltas);
     }
   } catch (err) {
     console.error('Failed to adjust stock for order status change:', err);
