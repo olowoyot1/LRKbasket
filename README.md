@@ -77,10 +77,13 @@ Checkout treats a bundle as one line item but reserves stock for its underlying 
 
 Sign in with `ADMIN_PASSWORD` at `/admin`. Four tabs, all cookie-protected (both the pages and the underlying APIs check the session, so there's no way to hit the data endpoints unauthenticated):
 
-- **Products** — add, edit, or delete products: name, category, price, unit, stock on hand, tag, icon, accent color, and an optional photo (uploaded to Vercel Blob; falls back to the line-art icon if none is set). Out-of-stock and low-stock (≤5) products are flagged inline.
+- **Products** — add, edit, or delete products: name, category, price, unit, stock on hand, tag, icon, accent color, an optional photo (uploaded to Vercel Blob; falls back to the line-art icon if none is set), and a **"Visible on storefront"** toggle — uncheck it to pull a product from the site without deleting it (its order history, and its place in any bundles, stay intact). Out-of-stock and low-stock (≤5) products are flagged inline; hidden ones show a "Hidden" badge.
+  - **Bulk tools** (collapsed by default, at the top of the Products tab): import many products at once from a CSV file — download the template button to get the exact column format, edit it in a spreadsheet, upload it back. Each row is matched to an existing product by exact name: a match updates that product, no match creates a new one, so you can re-upload the same file later to fix prices in bulk. There's a separate **batch photo uploader** too: select multiple image files at once, and each one is attached to the product whose name matches the filename (e.g. `Vine tomatoes.jpg` → the product named "Vine tomatoes"), so you're not uploading photos for 19 products one at a time.
 - **Bundles** — build kits from existing products (pick products + quantities, set a bundle price), optionally with group-buy pricing (see §3). Shows live progress toward each bundle's unlock target.
 - **Orders** — every order from both Paystack and WhatsApp, paginated (20 per page) and filterable by status. Click a row for contact info, delivery address, and the itemized order. **Mark as paid / failed / pending** updates the order and keeps stock in sync — marking an order failed gives its reserved stock back; reinstating it takes that stock again.
 - **Settings** — delivery fee and free-delivery threshold, editable without touching code. Read by the storefront and checkout on every request, so changes apply immediately.
+
+Hiding a product blocks it everywhere, not just on the homepage: checkout re-checks `active` status for every item, including products used as bundle components, so a hidden product can't be ordered directly or smuggled in through a stale cart or a bundle that still lists it. One thing that isn't automatic: a bundle containing a now-hidden product still *displays* normally on the storefront — attempting to check it out is what surfaces the "unavailable" error, rather than the bundle disappearing on its own. Worth remembering if you hide something that's part of an active bundle.
 
 `/admin` itself is excluded from search engines (`app/robots.ts` + `noindex` on every admin route), and the login endpoint is rate-limited to 5 attempts per 15 minutes per IP. That's a reasonable bar for a small storefront, not enterprise-grade protection — see the comment in `lib/rateLimit.ts` if you outgrow it.
 
@@ -143,6 +146,7 @@ app/
   api/checkout/route.ts         creates order, reserves stock (products + bundle components), initializes Paystack
   api/paystack/webhook/route.ts marks orders paid, sends confirmation email
   api/admin/products/           product CRUD
+  api/admin/products/bulk/route.ts  CSV bulk import (create-or-update by exact name match)
   api/admin/bundles/            bundle CRUD (products + quantities, group-buy settings)
   api/admin/orders/             paginated order list + status updates
   api/admin/settings/           delivery pricing
@@ -150,11 +154,12 @@ app/
   api/admin/seed/route.ts       one-click starter catalog (guarded, empty-DB only)
 lib/
   prisma.ts, paystack.ts, whatsapp.ts, email.ts, settings.ts, stock.ts,
-  adminAuth.ts, rateLimit.ts, env.ts, seedData.ts, bundles.ts, groupBuy.ts
+  orderStock.ts, adminAuth.ts, rateLimit.ts, env.ts, seedData.ts, bundles.ts,
+  groupBuy.ts, csv.ts, icons.ts
 components/                     cart context, header, product/bundle grids, cart drawer, admin UI
 prisma/schema.prisma             Product / Bundle / BundleItem / Order / OrderItem / Settings models
 prisma/seed.ts                    CLI seed script (same data as the admin seed button)
-tests/                            unit tests for pricing logic and the rate limiter
+tests/                            unit tests for pricing logic, the rate limiter, and the CSV parser
 ```
 
 ## 10. Known limitations
@@ -166,4 +171,5 @@ Being upfront about what this doesn't do, so nothing here is a surprise:
 - **Categories are still hardcoded** (`types/index.ts`), unlike products, stock, and delivery pricing, which are all editable from `/admin`.
 - **Group-buy pricing is prospective, not retroactive** (see §3) — a deliberate scope decision to avoid payment-splitting and refund logic.
 - **The rate limiter is per-instance**, not distributed (see §4) — fine for a small store, worth upgrading to Vercel Firewall or Upstash if traffic grows.
+- **CSV import matches by exact product name**, case-sensitive. A typo'd or differently-capitalized name in the CSV creates a *new* product instead of updating the existing one, rather than catching the near-match. Worth double-checking names against what's already in `/admin` before a bulk re-upload, especially the first time.
 - **Schema sync uses `prisma db push`, not `prisma migrate`.** Every deploy pushes the current `schema.prisma` straight to the database with `--accept-data-loss`, which is what makes zero-CLI deploys possible, but it means there's no migration history and no confirmation prompt before a destructive change (e.g. deleting a column) takes effect. Fine for one person managing a small store; if you add a team or need rollback-able migration history later, switch `build` in `package.json` back to `prisma migrate deploy` and generate real migration files with `npx prisma migrate dev` against a database you can reach locally.

@@ -17,12 +17,12 @@ export default function Header({
 
   return (
     <header className="sticky top-0 z-50 bg-bgDark text-cream border-b border-cream/10">
-      <div className="max-w-6xl mx-auto px-7 py-4 flex items-center justify-between gap-5">
-        <Link href="/" className="flex items-center gap-2.5 font-display text-[22px] font-semibold tracking-tight">
-          <span className="w-8 h-8 rounded-full bg-yellow text-purpleDark flex items-center justify-center font-display font-bold text-base border border-dashed border-cream">
+      <div className="max-w-6xl mx-auto px-4 sm:px-7 py-4 flex items-center justify-between gap-3 sm:gap-5">
+        <Link href="/" className="flex items-center gap-2 sm:gap-2.5 font-display text-[19px] sm:text-[22px] font-semibold tracking-tight">
+          <span className="w-8 h-8 rounded-full bg-yellow text-purpleDark flex items-center justify-center font-display font-bold text-base border border-dashed border-cream flex-none">
             L
           </span>
-          LRK Basket
+          <span className="whitespace-nowrap">LRK Basket</span>
         </Link>
         <nav className="hidden md:flex gap-6 text-sm">
           <a href="/#bundles" className="opacity-80 hover:opacity-100 transition-opacity">
@@ -34,7 +34,7 @@ export default function Header({
             </a>
           ))}
         </nav>
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-2.5 sm:gap-3.5 flex-none">
           {onSearch && (
             <input
               value={search}
@@ -45,16 +45,22 @@ export default function Header({
           )}
           <button
             onClick={openDrawer}
-            className="relative bg-yellow text-purpleDark rounded-full px-4 py-2 text-sm font-semibold flex items-center gap-2"
+            className="relative bg-yellow text-purpleDark rounded-full px-3 sm:px-4 py-2 text-sm font-semibold flex items-center gap-1.5 sm:gap-2 flex-none"
           >
-            Basket
-            <span className="bg-purpleDark text-cream rounded-full w-[19px] h-[19px] text-[11px] font-mono flex items-center justify-center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-none">
+              <path d="M6 6h15l-1.5 9h-12z" />
+              <path d="M6 6L4 3H2" />
+              <circle cx="9" cy="20" r="1.4" />
+              <circle cx="17" cy="20" r="1.4" />
+            </svg>
+            <span className="hidden sm:inline">Basket</span>
+            <span className="bg-purpleDark text-cream rounded-full w-[19px] h-[19px] text-[11px] font-mono flex items-center justify-center flex-none">
               {itemCount}
             </span>
           </button>
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="md:hidden flex flex-col gap-[5px] p-1.5"
+            className="md:hidden flex flex-col gap-[5px] p-1.5 flex-none"
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
           >
@@ -66,7 +72,7 @@ export default function Header({
       </div>
 
       {menuOpen && (
-        <div className="md:hidden border-t border-cream/10 px-7 py-4 space-y-4">
+        <div className="md:hidden border-t border-cream/10 px-4 sm:px-7 py-4 space-y-4">
           {onSearch && (
             <input
               value={search}

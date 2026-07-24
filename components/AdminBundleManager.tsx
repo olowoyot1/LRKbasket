@@ -214,7 +214,7 @@ export default function AdminBundleManager() {
       <form onSubmit={submit} className="bg-cream rounded-card p-6 mb-10 space-y-4">
         <h2 className="font-display text-lg font-semibold">{form.id ? 'Edit bundle' : 'Add a bundle'}</h2>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="col-span-2">
             <label className="block text-xs font-semibold mb-1.5">Name</label>
             <input
@@ -369,7 +369,7 @@ export default function AdminBundleManager() {
             </label>
           </div>
           {form.groupBuyEnabled && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold mb-1.5">Units needed to unlock</label>
                 <input
@@ -422,7 +422,7 @@ export default function AdminBundleManager() {
         <div className="space-y-2">
           {bundles.map((b) => (
             <div key={b.id} className="bg-white rounded-xl border border-ink/10 px-4 py-3">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <div
                   className={`w-10 h-10 rounded-lg flex items-center justify-center flex-none overflow-hidden ${
                     b.imageUrl ? '' : b.color === 'purple' ? 'bg-purple/15' : 'bg-yellow/20'
@@ -435,7 +435,7 @@ export default function AdminBundleManager() {
                     <Icon name="jar" className={`w-5 h-5 ${b.color === 'purple' ? 'text-purple' : 'text-yellowDark'}`} />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-[160px]">
                   <div className="text-sm font-medium truncate flex items-center gap-2">
                     {b.name}
                     {!b.active && <span className="text-[10px] uppercase text-ink/40 border border-ink/20 rounded-full px-1.5 py-0.5">Hidden</span>}
@@ -444,8 +444,8 @@ export default function AdminBundleManager() {
                     {b.items.map((i) => `${i.product.name} ×${i.qty}`).join(', ')}
                   </div>
                 </div>
-                <div className="font-mono text-sm w-24 text-right flex-none">{formatNaira(b.price)}</div>
-                <div className="flex gap-2 flex-none">
+                <div className="font-mono text-sm flex-none">{formatNaira(b.price)}</div>
+                <div className="flex gap-2 flex-none ml-auto sm:ml-0">
                   <button onClick={() => startEdit(b)} className="text-xs border border-ink/20 rounded-lg px-3 py-1.5">
                     Edit
                   </button>

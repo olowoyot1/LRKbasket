@@ -53,6 +53,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No valid items in cart' }, { status: 400 });
   }
 
+  // A hidden product can't be ordered directly, and can't be smuggled in as
+  // a bundle component either - if it's off the storefront, it's off
+  // checkout too, regardless of what's still sitting in someone's cart.
+  for (const p of products) {
+    if (!p.active) {
+      return NextResponse.json({ error: `${p.name} is no longer available` }, { status: 409 });
+    }
+  }
+  for (const b of bundles) {
+    const inactiveComponent = b.items.find((i) => !i.product.active);
+    if (inactiveComponent) {
+      return NextResponse.json(
+        { error: `${b.name} is unavailable because ${inactiveComponent.product.name} is out of listing` },
+        { status: 409 }
+      );
+    }
+  }
+
   // Product line items: authoritative price/name from the database.
   const productLineItems = productRequests
     .map((i) => {

@@ -9,6 +9,7 @@ export type Product = {
   color: string;
   imageUrl?: string | null;
   stock: number;
+  active: boolean;
 };
 
 export type BundleItemView = {

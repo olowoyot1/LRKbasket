@@ -43,7 +43,7 @@ export default function ProductCard({ product }: { product: Product }) {
         {outOfStock ? (
           <div className="text-xs text-tomato font-medium mt-1">Out of stock</div>
         ) : lowStock ? (
-          <div className="text-xs text-carrot font-medium mt-1">Only {product.stock} left</div>
+          <div className="text-xs text-yellowDark font-medium mt-1">Only {product.stock} left</div>
         ) : null}
       </div>
       <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-dashed border-ink/20">

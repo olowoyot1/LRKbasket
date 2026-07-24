@@ -21,15 +21,15 @@ export default function AdminNav() {
   ];
 
   return (
-    <div className="flex items-center justify-between mb-8">
-      <div className="flex items-center gap-1 bg-cream rounded-full p-1">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+      <div className="flex items-center gap-1 bg-cream rounded-full p-1 overflow-x-auto max-w-full">
         {tabs.map((t) => {
           const active = pathname === t.href;
           return (
             <Link
               key={t.href}
               href={t.href}
-              className={`px-4 py-2 rounded-full text-sm font-medium ${
+              className={`px-4 py-2 rounded-full text-sm font-medium flex-none whitespace-nowrap ${
                 active ? 'bg-purple text-cream' : 'text-ink/60'
               }`}
             >

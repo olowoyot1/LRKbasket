@@ -15,7 +15,7 @@ export const revalidate = 30;
 
 export default async function HomePage() {
   const [products, settings, bundles] = await Promise.all([
-    prisma.product.findMany({ orderBy: { createdAt: 'asc' } }),
+    prisma.product.findMany({ where: { active: true }, orderBy: { createdAt: 'asc' } }),
     getSettings(),
     getActiveBundles(),
   ]);

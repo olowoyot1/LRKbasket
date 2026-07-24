@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Icon, { ICON_NAMES } from './Icon';
 import AdminNav from './AdminNav';
+import AdminBulkTools from './AdminBulkTools';
 import { CATEGORIES, formatNaira, type Product } from '@/types';
 
 type FormState = {
@@ -16,6 +17,7 @@ type FormState = {
   color: 'yellow' | 'purple';
   imageUrl: string | null;
   stock: string;
+  active: boolean;
 };
 
 const EMPTY_FORM: FormState = {
@@ -29,6 +31,7 @@ const EMPTY_FORM: FormState = {
   color: 'yellow',
   imageUrl: null,
   stock: '0',
+  active: true,
 };
 
 export default function AdminProductManager() {
@@ -86,6 +89,7 @@ export default function AdminProductManager() {
       color: p.color === 'purple' ? 'purple' : 'yellow',
       imageUrl: p.imageUrl ?? null,
       stock: String(p.stock),
+      active: p.active,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -108,6 +112,7 @@ export default function AdminProductManager() {
       color: form.color,
       imageUrl: form.imageUrl,
       stock: Number(form.stock),
+      active: form.active,
     };
     try {
       const res = await fetch(form.id ? `/api/admin/products/${form.id}` : '/api/admin/products', {
@@ -164,10 +169,12 @@ export default function AdminProductManager() {
       </div>
       <AdminNav />
 
+      <AdminBulkTools products={products} onChanged={loadProducts} />
+
       <form onSubmit={submit} className="bg-cream rounded-card p-6 mb-10 space-y-4">
         <h2 className="font-display text-lg font-semibold">{form.id ? 'Edit product' : 'Add a product'}</h2>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold mb-1.5">Name</label>
             <input
@@ -267,6 +274,18 @@ export default function AdminProductManager() {
               ))}
             </div>
           </div>
+          <div className="flex items-center gap-2 pt-6">
+            <input
+              type="checkbox"
+              id="productActive"
+              checked={form.active}
+              onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+              className="w-4 h-4"
+            />
+            <label htmlFor="productActive" className="text-sm">
+              Visible on storefront
+            </label>
+          </div>
           <div className="col-span-2">
             <label className="block text-xs font-semibold mb-1.5">Photo (optional — falls back to the icon below)</label>
             <div className="flex items-center gap-3">
@@ -328,7 +347,7 @@ export default function AdminProductManager() {
           {products.map((p) => (
             <div
               key={p.id}
-              className="flex items-center gap-4 bg-white rounded-xl border border-ink/10 px-4 py-3"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-white rounded-xl border border-ink/10 px-4 py-3"
             >
               <div
                 className={`w-10 h-10 rounded-lg flex items-center justify-center flex-none overflow-hidden ${
@@ -342,21 +361,28 @@ export default function AdminProductManager() {
                   <Icon name={p.icon} className={`w-5 h-5 ${p.color === 'purple' ? 'text-purple' : 'text-yellowDark'}`} />
                 )}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{p.name}</div>
+              <div className="flex-1 min-w-[160px]">
+                <div className="text-sm font-medium truncate flex items-center gap-2">
+                  {p.name}
+                  {!p.active && (
+                    <span className="text-[10px] uppercase text-ink/40 border border-ink/20 rounded-full px-1.5 py-0.5 flex-none">
+                      Hidden
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-ink/50">
                   {CATEGORIES.find((c) => c.id === p.category)?.label ?? p.category} · {p.unit}
                 </div>
               </div>
               <div
-                className={`text-xs font-medium w-20 text-right flex-none ${
-                  p.stock <= 0 ? 'text-tomato' : p.stock <= 5 ? 'text-carrot' : 'text-ink/50'
+                className={`text-xs font-medium flex-none ${
+                  p.stock <= 0 ? 'text-tomato' : p.stock <= 5 ? 'text-yellowDark' : 'text-ink/50'
                 }`}
               >
                 {p.stock <= 0 ? 'Out of stock' : `${p.stock} in stock`}
               </div>
-              <div className="font-mono text-sm w-24 text-right flex-none">{formatNaira(p.price)}</div>
-              <div className="flex gap-2 flex-none">
+              <div className="font-mono text-sm flex-none">{formatNaira(p.price)}</div>
+              <div className="flex gap-2 flex-none ml-auto sm:ml-0">
                 <button onClick={() => startEdit(p)} className="text-xs border border-ink/20 rounded-lg px-3 py-1.5">
                   Edit
                 </button>

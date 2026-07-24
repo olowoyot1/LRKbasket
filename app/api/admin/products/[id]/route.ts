@@ -12,6 +12,8 @@ const productSchema = z.object({
   icon: z.string().min(1),
   color: z.enum(['yellow', 'purple']),
   imageUrl: z.string().url().optional().nullable(),
+  stock: z.number().int().min(0),
+  active: z.boolean(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
